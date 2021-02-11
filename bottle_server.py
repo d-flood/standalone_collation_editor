@@ -136,10 +136,14 @@ def apparatus():
     format = request.params.format
     if not format:
         format = 'xml'
-    if format == 'xml':
-        file_ext = 'xml'
-    else:
-        file_ext = 'txt'
+    ### removing this because I am setting the file name to be the collation unit
+    # if format == 'xml':
+    #     file_ext = 'xml'
+    # else:
+    #     file_ext = 'txt'
+    # My change:
+    collation_filename = data[0]['context']
+    ###
     exporter_settings = request.params.settings
     print(exporter_settings)
     if exporter_settings != 'null':
@@ -149,7 +153,7 @@ def apparatus():
 
     app = exf.export_data(data, format)
     response.content_type = 'text/plain'
-    response.headers['Content-Disposition'] = 'attachment; filename="%s-apparatus.%s"' % (format, file_ext)
+    response.headers['Content-Disposition'] = f'attachment; filename="{collation_filename}.xml"'
     response.set_cookie('fileDownload', 'true')
     return app
 
