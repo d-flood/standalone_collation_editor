@@ -1,3 +1,8 @@
+This was forked so that I could make a few small changes to make my own research and collation more convenient.
+- Changed font to Cambria, which seems to work better for Greek text and diacritics
+- Added the underdot unicode character to 'ignore unclear' rule
+- Changed default xml collation download filename to be the current collation unit. `{"context": <collation unit>`
+
 Introduction
 ---
 This is a standalone version of the collation editor. It works with the local file system on your computer. A small example of a single Greek verse is included as a sample file. 
