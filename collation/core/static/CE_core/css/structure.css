@@ -8,11 +8,11 @@ body.waiting,  body.waiting div input {
 }
 
 div#header {
-    font-family: arial;
+    font-family: Cambria;
 }
 
 div#header h1 {
-    font-size: 12pt;
+    font-size: 13pt;
 }
 
 div#header h1#stage_id {
@@ -46,7 +46,7 @@ div#header.reorder_header {
 }
 
 div#header.approved_header {
-    background: silver;
+    background: lightgreen;
 }
 
 

@@ -385,9 +385,9 @@ td.main_reading, td.overlap_main_reading {
 #single_witness_reading {
 	background: white;
 	left: 10px;
-	font-family: arial;
+	font-family: Cambria;
 	overflow-y: auto;
-	height: 30px;
+	height: 125px;
 }
 
 table.collation_overview {
