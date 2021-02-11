@@ -1,0 +1,6 @@
+A directory here named `json` will contain witness directories; 
+each witness directory will contain all individual verse transcriptions 
+files for that witness. My naming convention is to name the witness 
+directories after their Gregory-Aland numbers. This keeps things simpler 
+when generating JSON transcription files and directories programmatically 
+(i.e., the `siglum` value is saving a lot of work).

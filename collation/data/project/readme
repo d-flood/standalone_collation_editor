@@ -1,0 +1,2 @@
+Here there should be a directory named `default` which mustin contain `config.json`. 
+This config file, among other things, determines which witnes directories should be checked for a transcription JSON file.
