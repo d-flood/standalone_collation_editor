@@ -2,6 +2,7 @@ This was forked so that I could make a few small changes to make my own research
 - Changed font to Cambria, which seems to work better for Greek text and diacritics
 - Added the underdot unicode character to 'ignore unclear' rule
 - Changed default xml collation download filename to be the current collation unit. `{"context": <collation unit>`
+- Changes so far include syntax that requires Python 3.6+ (f strings)
 
 Introduction
 ---
