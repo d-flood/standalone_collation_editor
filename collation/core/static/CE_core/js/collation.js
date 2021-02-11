@@ -28,7 +28,8 @@ CL = (function() {
       project = {},
       collateData = {},
       context = '',
-      data = {};
+      data = {},
+      debug = false;
 
 
   //private variable declarations
@@ -58,7 +59,7 @@ CL = (function() {
   let _initialiseEditor, _initialiseProject, _setProjectConfig, _setDisplaySettings,
    _setLocalPythonFunctions, _setRuleClasses, _setRuleConditions, _setOverlappedOptions,
    _includeJavascript, _prepareCollation, _findSaved, _getContextFromInputForm,
-   _getWitnessesFromInputForm, _showSavedVersions, _getSavedRadio, _makeSavedCollationTable,
+   _getWitnessesFromInputForm, _getDebugSetting, _showSavedVersions, _getSavedRadio, _makeSavedCollationTable,
    _loadSavedCollation, _getSubreadingWitnessData, _findStandoffRegularisationText,
    _collapseUnit, _expandUnit, _expandAll, _collapseAll, _getEmptyCell, _mergeDicts,
    _getUnitData, _hasGapBefore, _hasGapAfter, _getAllEmptyReadingWitnesses, _containsEmptyReading,
@@ -71,7 +72,8 @@ CL = (function() {
    _disableEventPropagation, _showCollationSettings, _checkWitnesses, _getScrollPosition,
    _getMousePosition, _displayWitnessesHover, _getWitnessesForReading,
    _findStandoffWitness, _findReadingPosById, _getPreStageChecks, _makeRegDecisionsStandoff,
-   _contextInputOnload;
+   _contextInputOnload, _getReadingHistory, _getNextTargetRuleInfo, _removeAppliedRules,
+   _getHistoricalReading;
 
 
   //*********  public functions *********
@@ -713,11 +715,18 @@ CL = (function() {
           } else {
             id_string = String(j);
           }
-          unit_data_options = {
-            'overlap': true,
-            'col_length': options.overlap_details[unit._id].col_length,
-            'unit_id': unit._id
-          };
+          if (options.hasOwnProperty('getUnitDataOptions')) {
+            unit_data_options = options.getUnitDataOptions;
+            unit_data_options.overlap = true;
+            unit_data_options.col_length = options.overlap_details[unit._id].col_length;
+            unit_data_options.unit_id = unit._id;
+          } else {
+            unit_data_options = {
+              'overlap': true,
+              'col_length': options.overlap_details[unit._id].col_length,
+              'unit_id': unit._id
+            };
+          }
           if (app > 1) {
             unit_data_options.app_id = 'apparatus' + app;
           } else {
@@ -749,8 +758,8 @@ CL = (function() {
             spacer_rows.push(SV.getSpacerUnitData(id_string, unit.start, unit.end));
           } else if (format === 'reorder') {
             unit_data = OR.getUnitData(unit.readings, id_string, format, unit.start, unit.end, unit_data_options);
-          } else if (format === 'version' || format === 'version_additions' || format === 'other_version_additions') {
-            unit_data = VER.get_unit_data(unit.readings, id_string, format, unit.start, unit.end, unit_data_options);
+          // } else if (format === 'version' || format === 'version_additions' || format === 'other_version_additions') {
+          //   unit_data = VER.get_unit_data(unit.readings, id_string, format, unit.start, unit.end, unit_data_options);
           } else {
             unit_data = _getUnitData(unit.readings, id_string, format, unit.start, unit.end, unit_data_options);
           }
@@ -1011,9 +1020,14 @@ CL = (function() {
           } else {
             id_string = String(j);
           }
-          unit_data_options = {
-            'unit_id': unit._id
-          };
+          if (options.hasOwnProperty('getUnitDataOptions')) {
+            unit_data_options = options.getUnitDataOptions;
+            unit_data_options.unit_id = unit._id;
+          } else {
+            unit_data_options = {
+              'unit_id': unit._id
+            };
+          }
           if (app > 1) {
             unit_data_options.app_id = 'apparatus' + app;
           } else {
@@ -1457,7 +1471,7 @@ CL = (function() {
     unit_details_regex = /(variant|drag)_unit_(\d+)(_app_)?(\d+)?(_reading_|_row_)?(\d+)?/;
     m = id.match(unit_details_regex);
     if (m === null) {
-      console.log(unit_details_regex)
+      console.log(unit_details_regex);
     }
     details = [parseInt(m[2], 10)];
     if (typeof m[4] !== 'undefined') {
@@ -1758,10 +1772,9 @@ CL = (function() {
     //Populate the subreading type dropdown
     if (document.getElementById('subreading_select')) {
       subreading_classes = [];
-      //TODO: check this can use CL.project.ruleClasses
-      for (i = 0; i < CL.project.ruleClasses.length; i += 1) {
-        if (CL.project.ruleClasses[i].create_in_SV === true && CL.project.ruleClasses[i].subreading === true) {
-          subreading_classes.push(CL.project.ruleClasses[i]);
+      for (i = 0; i < CL.ruleClasses.length; i += 1) {
+        if (CL.ruleClasses[i].create_in_SV === true && CL.ruleClasses[i].subreading === true) {
+          subreading_classes.push(CL.ruleClasses[i]);
         }
       }
       cforms.populateSelect(subreading_classes, document.getElementById('subreading_select'), {'value_key': 'value', 'text_keys': 'name', 'add_select': false});
@@ -2715,6 +2728,7 @@ CL = (function() {
     if (context && base_text !== 'none') {
       CL.context = context;
       CL.dataSettings.witness_list = _getWitnessesFromInputForm();
+      CL.debug = _getDebugSetting();
       RG.getCollationData(output, 0);
     }
   };
@@ -2767,6 +2781,13 @@ CL = (function() {
         return witnessList;
       }
     }
+  };
+
+  _getDebugSetting = function () {
+    if (CL.services.hasOwnProperty('getDebugSetting')) {
+      return CL.services.getDebugSetting();
+    }
+    return false;
   };
 
   _showSavedVersions = function(data, context) {
@@ -3921,21 +3942,21 @@ CL = (function() {
   };
 
   //not used at the moment
-  _removeOverlappedReadings = function() {
-    var apparatus, i, j;
-    apparatus = CL.data.apparatus;
-    for (i = 0; i < apparatus.length; i += 1) {
-      for (j = 0; j < apparatus[i].readings.length; j += 1) {
-        if (apparatus[i].readings[j].hasOwnProperty('overlap')) {
-          apparatus[i].readings[j] = 'None';
-        }
-      }
-      while (apparatus[i].readings.indexOf('None') !== -1) {
-        apparatus[i].readings.splice(apparatus[i].readings.indexOf('None'), 1);
-      }
-    }
-    CL.data.apparatus = apparatus;
-  };
+  // _removeOverlappedReadings = function() {
+  //   var apparatus, i, j;
+  //   apparatus = CL.data.apparatus;
+  //   for (i = 0; i < apparatus.length; i += 1) {
+  //     for (j = 0; j < apparatus[i].readings.length; j += 1) {
+  //       if (apparatus[i].readings[j].hasOwnProperty('overlap')) {
+  //         apparatus[i].readings[j] = 'None';
+  //       }
+  //     }
+  //     while (apparatus[i].readings.indexOf('None') !== -1) {
+  //       apparatus[i].readings.splice(apparatus[i].readings.indexOf('None'), 1);
+  //     }
+  //   }
+  //   CL.data.apparatus = apparatus;
+  // };
 
   /** apply the current display settings to the given token */
   _applySettings = function(word) {
@@ -4319,6 +4340,8 @@ CL = (function() {
       'values': []
     };
 
+
+
     //now get all the words and their decisions or an empty list if no decisions
     classes = [];
     details = [];
@@ -4339,9 +4362,12 @@ CL = (function() {
         }]);
       }
     }
+
+
+
     //now implement your algorithm and push each result to the standoff reading
     //work out the text at this stage as part of that - text should be before the rules are applied so first one has none applied etc.
-    standoff_reading = getReading_history(classes, details, standoff_reading, rule_details, type, subreading_types, reading, witness, subreading);
+    standoff_reading = _getReadingHistory(classes, details, standoff_reading, rule_details, type, subreading_types, reading, witness, subreading);
     standoff_reading.value = standoff_reading.values.join('|');
     delete standoff_reading.values;
     if (!CL.data.marked_readings.hasOwnProperty(standoff_reading.value)) {
@@ -4367,6 +4393,129 @@ CL = (function() {
     document.getElementById('project').value = project._id;
     document.getElementById('preselected_witnesses').value = project.witnesses.join();
   };
+
+  _getReadingHistory = function(classes, details, standoff_reading, rule_details, type, subreading_types, original_reading, witness, subreading) {
+    var position, temp, rule_type, lowest_rule_positions, all_done, reading;
+    //position is how far through the decision lists we are
+    position = 0;
+    all_done = false;
+    while (!all_done) {
+      temp = _getNextTargetRuleInfo(classes, subreading_types);
+      rule_type = temp[0];
+      lowest_rule_positions = temp[1];
+      if (!rule_type) {
+        all_done = true;
+      } else {
+        //['suffixed_sigla', 'identifier', 'name', 'subreading', 'suffixed_label']
+        standoff_reading.suffixed_sigla.push(rule_details[rule_type][0]);
+        standoff_reading.identifier.push(rule_details[rule_type][1]);
+        standoff_reading.name.push(rule_details[rule_type][2]);
+        standoff_reading.subreading.push(rule_details[rule_type][3]);
+        standoff_reading.suffixed_label.push(rule_details[rule_type][4]);
+        standoff_reading.values.push(rule_type);
+        standoff_reading.reading_history.push(_getHistoricalReading(rule_type, lowest_rule_positions, classes, details, original_reading, witness, subreading));
+        classes = _removeAppliedRules(rule_type, lowest_rule_positions, classes);
+      }
+    }
+    //now add the current one
+    standoff_reading.suffixed_sigla.push(rule_details[type][0]);
+    standoff_reading.identifier.push(rule_details[type][1]);
+    standoff_reading.name.push(rule_details[type][2]);
+    standoff_reading.subreading.push(rule_details[type][3]);
+    standoff_reading.suffixed_label.push(rule_details[type][4]);
+    standoff_reading.values.push(type);
+    standoff_reading.reading_text = standoff_reading.reading_history[0];
+    return standoff_reading;
+  };
+
+  _getNextTargetRuleInfo = function(classes, subreading_types) {
+    var rule_type, positions, lowest_position, i, j;
+    positions = [];
+    lowest_position = 1000000000;
+    for (i = 0; i < classes.length; i += 1) {
+      positions[i] = null;
+      for (j = 0; j < classes[i].length; j += 1) {
+        if (classes[i][j] && positions[i] === null) {
+          positions[i] = j;
+          if (j < lowest_position) {
+            lowest_position = j;
+          }
+        }
+      }
+    }
+    //put a rule type in to start off with so we always have one - overwrite if needed in the loop
+    rule_type = classes[0][lowest_position];
+    for (i = 1; i < classes.length; i += 1) {
+      if (classes[i][lowest_position] !== null && typeof classes[i][lowest_position] !== 'undefined' && (typeof rule_type === 'undefined' || rule_type === null || subreading_types.indexOf(rule_type) !== -1)) {
+        rule_type = classes[i][lowest_position];
+      }
+    }
+    if (subreading_types.indexOf(rule_type) !== -1) {
+      for (i = 0; i < positions.length; i += 1) {
+        if (classes[i][positions[i]] !== null && typeof classes[i][positions[i]] !== 'undefined' && subreading_types.indexOf(classes[i][positions[i]]) === -1) {
+          rule_type = classes[i][positions[i]];
+          break;
+        }
+      }
+    }
+    return [rule_type, positions];
+  };
+
+  _removeAppliedRules = function(rule_type, positions, classes) {
+    for (let i = 0; i < classes.length; i += 1) {
+      if (classes[i][positions[i]] === rule_type) {
+        classes[i][positions[i]] = null;
+      }
+    }
+    return classes;
+  };
+
+  _getHistoricalReading = function(rule_type, positions, classes, details, reading, witness, subreading) {
+    var new_reading;
+    new_reading = [];
+    if (reading.hasOwnProperty('combined_gap_before_subreadings') &&
+      reading.combined_gap_before_subreadings.indexOf(witness) !== -1 &&
+      reading.hasOwnProperty('combined_gap_before_subreadings_details') &&
+      reading.combined_gap_before_subreadings_details.hasOwnProperty(witness)) {
+      new_reading.push('&lt;' + reading.combined_gap_before_subreadings_details[witness] + '&gt;');
+    } else if (reading.text.length > 0 && reading.text[0].hasOwnProperty('combined_gap_before') && (!reading.hasOwnProperty('SR_text') || !reading.SR_text.hasOwnProperty(witness))) {
+      if (reading.text[0].hasOwnProperty(witness) && reading.text[0][witness].hasOwnProperty('gap_before')) { //first unit in verse this might actually work like the others now
+        new_reading.push('&lt;' + reading.text[0][witness].gap_before_details + '&gt;');
+      } else if (reading.text[0].hasOwnProperty('combined_gap_before') && reading.text[0].combined_gap_before.length > 0 && reading.text[0].hasOwnProperty('combined_gap_before_details')) { //subsequent units in verse
+        //this may be the only condition ever hit here
+        new_reading.push('&lt;' + reading.text[0].combined_gap_before_details + '&gt;');
+      }
+    }
+    for (let i = 0; i < positions.length; i += 1) {
+      if (positions[i] !== null) {
+        if (classes[i][positions[i]] === rule_type) {
+          new_reading.push(details[i][positions[i]].n);
+        } else {
+          if (positions[i] > 0) {
+            new_reading.push(details[i][positions[i] - 1].n);
+          } else {
+            new_reading.push(details[i][0].base_reading);
+          }
+        }
+      } else if (details[i].length > 0) {
+        new_reading.push(details[i][details[i].length - 1].n);
+      } else {
+        new_reading.push(details[i][0].n);
+      }
+      if (i === positions.length - 1 && reading.text[i].hasOwnProperty('combined_gap_after') && reading.text[i].combined_gap_after.indexOf(witness) !== -1) {
+        if (subreading.text[i][witness].hasOwnProperty('gap_after')) {
+          new_reading.push('&lt;' + subreading.text[i][witness].gap_details + '&gt;');
+        }
+      } else if (i !== positions.length - 1) {
+        if (subreading.text[i][witness].hasOwnProperty('gap_after')) {
+          new_reading.push('&lt;' + subreading.text[i][witness].gap_details + '&gt;');
+        }
+      }
+    }
+    return new_reading.join(' ');
+  };
+
+
 
 
 //priv-e
@@ -4415,6 +4564,7 @@ CL = (function() {
     context: context,
     data: data,
     calculatePosition: calculatePosition,
+    debug: debug,
 
     setServiceProvider: setServiceProvider,
     expandFillPageClients: expandFillPageClients,
@@ -4698,128 +4848,12 @@ CL = (function() {
         //   }
         // },
 
-        // get_reading_history: function(classes, details, standoff_reading, rule_details, type, subreading_types, original_reading, witness, subreading) {
-        //   var position, temp, rule_type, lowest_rule_positions, all_done, reading;
-        //   //position is how far through the decision lists we are
-        //   position = 0;
-        //   all_done = false;
-        //   while (!all_done) {
-        //     temp = CL.get_next_target_rule_info(classes, subreading_types);
-        //     rule_type = temp[0];
-        //     lowest_rule_positions = temp[1];
-        //     if (!rule_type) {
-        //       all_done = true;
-        //     } else {
-        //       //['suffixed_sigla', 'identifier', 'name', 'subreading', 'suffixed_label']
-        //       standoff_reading.suffixed_sigla.push(rule_details[rule_type][0]);
-        //       standoff_reading.identifier.push(rule_details[rule_type][1]);
-        //       standoff_reading.name.push(rule_details[rule_type][2]);
-        //       standoff_reading.subreading.push(rule_details[rule_type][3]);
-        //       standoff_reading.suffixed_label.push(rule_details[rule_type][4]);
-        //       standoff_reading.values.push(rule_type);
-        //       standoff_reading.reading_history.push(CL.get_historical_reading(rule_type, lowest_rule_positions, classes, details, original_reading, witness, subreading));
-        //       classes = CL.remove_applied_rules(rule_type, lowest_rule_positions, classes);
-        //     }
-        //   }
-        //   //now add the current one
-        //   standoff_reading.suffixed_sigla.push(rule_details[type][0]);
-        //   standoff_reading.identifier.push(rule_details[type][1]);
-        //   standoff_reading.name.push(rule_details[type][2]);
-        //   standoff_reading.subreading.push(rule_details[type][3]);
-        //   standoff_reading.suffixed_label.push(rule_details[type][4]);
-        //   standoff_reading.values.push(type);
-        //   standoff_reading.reading_text = standoff_reading.reading_history[0];
-        //   return standoff_reading;
-        // },
-
-        // remove_applied_rules: function(rule_type, positions, classes) {
-        //   var i;
-        //   for (i = 0; i < classes.length; i += 1) {
-        //     if (classes[i][positions[i]] === rule_type) {
-        //       classes[i][positions[i]] = null;
-        //     }
-        //   }
-        //   return classes;
-        // },
-
-        // get_historical_reading: function(rule_type, positions, classes, details, reading, witness, subreading) {
-        //   var i, new_reading;
-        //   new_reading = [];
-        //   if (reading.hasOwnProperty('combined_gap_before_subreadings') &&
-        //     reading.combined_gap_before_subreadings.indexOf(witness) !== -1 &&
-        //     reading.hasOwnProperty('combined_gap_before_subreadings_details') &&
-        //     reading.combined_gap_before_subreadings_details.hasOwnProperty(witness)) {
-        //     new_reading.push('&lt;' + reading.combined_gap_before_subreadings_details[witness] + '&gt;');
-        //   } else if (reading.text.length > 0 && reading.text[0].hasOwnProperty('combined_gap_before') && (!reading.hasOwnProperty('SR_text') || !reading.SR_text.hasOwnProperty(witness))) {
-        //     if (reading.text[0].hasOwnProperty(witness) && reading.text[0][witness].hasOwnProperty('gap_before')) { //first unit in verse this might actually work like the others now
-        //       new_reading.push('&lt;' + reading.text[0][witness].gap_before_details + '&gt;');
-        //     } else if (reading.text[0].hasOwnProperty('combined_gap_before') && reading.text[0].combined_gap_before.length > 0 && reading.text[0].hasOwnProperty('combined_gap_before_details')) { //subsequent units in verse
-        //       //this may be the only condition ever hit here
-        //       new_reading.push('&lt;' + reading.text[0].combined_gap_before_details + '&gt;');
-        //     }
-        //   }
-        //   for (i = 0; i < positions.length; i += 1) {
-        //     if (positions[i] !== null) {
-        //       if (classes[i][positions[i]] === rule_type) {
-        //         new_reading.push(details[i][positions[i]].n);
-        //       } else {
-        //         if (positions[i] > 0) {
-        //           new_reading.push(details[i][positions[i] - 1].n);
-        //         } else {
-        //           new_reading.push(details[i][0].base_reading);
-        //         }
-        //       }
-        //     } else if (details[i].length > 0) {
-        //       new_reading.push(details[i][details[i].length - 1].n);
-        //     } else {
-        //       new_reading.push(details[i][0].n);
-        //     }
-        //     if (i === positions.length - 1 && reading.text[i].hasOwnProperty('combined_gap_after') && reading.text[i].combined_gap_after.indexOf(witness) !== -1) {
-        //       if (subreading.text[i][witness].hasOwnProperty('gap_after')) {
-        //         new_reading.push('&lt;' + subreading.text[i][witness].gap_details + '&gt;');
-        //       }
-        //     } else if (i !== positions.length - 1) {
-        //       if (subreading.text[i][witness].hasOwnProperty('gap_after')) {
-        //         new_reading.push('&lt;' + subreading.text[i][witness].gap_details + '&gt;');
-        //       }
-        //     }
-        //   }
-        //   return new_reading.join(' ');
-        // },
 
 
-            // get_next_target_rule_info: function(classes, subreading_types) {
-            //   var rule_type, positions, lowest_position, i, j;
-            //   positions = [];
-            //   lowest_position = 1000000000;
-            //   for (i = 0; i < classes.length; i += 1) {
-            //     positions[i] = null;
-            //     for (j = 0; j < classes[i].length; j += 1) {
-            //       if (classes[i][j] && positions[i] === null) {
-            //         positions[i] = j;
-            //         if (j < lowest_position) {
-            //           lowest_position = j;
-            //         }
-            //       }
-            //     }
-            //   }
-            //   //put a rule type in to start off with so we always have one - overwrite if needed in the loop
-            //   rule_type = classes[0][lowest_position];
-            //   for (i = 1; i < classes.length; i += 1) {
-            //     if (classes[i][lowest_position] !== null && typeof classes[i][lowest_position] !== 'undefined' && (typeof rule_type === 'undefined' || rule_type === null || subreading_types.indexOf(rule_type) !== -1)) {
-            //       rule_type = classes[i][lowest_position];
-            //     }
-            //   }
-            //   if (subreading_types.indexOf(rule_type) !== -1) {
-            //     for (i = 0; i < positions.length; i += 1) {
-            //       if (classes[i][positions[i]] !== null && typeof classes[i][positions[i]] !== 'undefined' && subreading_types.indexOf(classes[i][positions[i]]) === -1) {
-            //         rule_type = classes[i][positions[i]];
-            //         break;
-            //       }
-            //     }
-            //   }
-            //   return [rule_type, positions];
-            // },
+
+
+
+
 
             // processesHandId = function(hand) {
             //   var display_hand;
