@@ -1,0 +1,13 @@
+{
+    "id": "default",
+    "name": "My Collation",
+    "base_text": "",
+    "managingEditor": "default",
+    "editors": [
+        "default"
+    ],
+    "witnesses": [
+
+    ],
+    "excluded_witnesses": []
+}
