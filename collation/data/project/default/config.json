@@ -6,8 +6,6 @@
     "editors": [
         "default"
     ],
-    "witnesses": [
-
-    ],
+    "witnesses": [],
     "excluded_witnesses": []
 }
