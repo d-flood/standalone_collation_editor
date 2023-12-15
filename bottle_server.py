@@ -1,6 +1,5 @@
 import sys
 import os
-import imp
 import json
 import bottle
 from bottle import run, route, static_file, request, abort, get, post, response, redirect
