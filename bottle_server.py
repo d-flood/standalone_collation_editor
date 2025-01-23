@@ -2,9 +2,8 @@ import sys
 import os
 import json
 import bottle
-from bottle import run, route, static_file, request, abort, get, post, response, redirect
+from bottle import run, route, static_file, request, abort, response, redirect
 from collation.store import Store
-from io import StringIO
 from collation.core.preprocessor import PreProcessor
 from collation.core.exporter_factory import ExporterFactory
 
@@ -122,8 +121,8 @@ def collation(app, context):
     p = PreProcessor(display_settings_config, local_python_functions, rule_conditions_config)
     try:
         output = p.process_witness_list(data_input, requested_witnesses, rules, basetext_transcription, project, display_settings, collate_settings, accept)
-    except:
-        abort(500, "Data Input Exception")
+    except Exception as e:
+        abort(500, f"Data Input Exception: {e}")
     response.content_type = 'application/json'
     return json.dumps(output)#, default=json_util.default)
 
